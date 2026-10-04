@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentasi NetPulse SNMP - Network Operations Center</title>
+    <style>
+        :root {
+            --bg-color: #090D16;
+            --card-bg: #111827;
+            --card-border: #1E293B;
+            --cyan: #00E5FF;
+            --emerald: #10B981;
+            --amber: #F59E0B;
+            --rose: #F43F5E;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .slide-container {
+            width: 92%;
+            max-width: 1100px;
+            aspect-ratio: 16 / 9;
+            background: var(--card-bg);
+            border: 1.5px solid var(--cyan);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 229, 255, 0.15);
+            padding: 40px;
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .slide-container.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header-tag {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            border: 1px solid var(--emerald);
+        }
+
+        h1 {
+            color: var(--cyan);
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        h2 {
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            flex-grow: 1;
+        }
+
+        .card {
+            background: #1E293B;
+            border-radius: 14px;
+            padding: 20px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card.cyan { border-top: 4px solid var(--cyan); }
+        .card.emerald { border-top: 4px solid var(--emerald); }
+        .card.amber { border-top: 4px solid var(--amber); }
+
+        .card h3 {
+            font-size: 17px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .card.cyan h3 { color: var(--cyan); }
+        .card.emerald h3 { color: var(--emerald); }
+        .card.amber h3 { color: var(--amber); }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            color: var(--text-main);
+            position: relative;
+            padding-left: 18px;
+        }
+
+        li::before {
+            content: "•";
+            color: var(--cyan);
+            font-weight: bold;
+            font-size: 18px;
+            position: absolute;
+            left: 0;
+            top: -2px;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--card-border);
+            padding-top: 16px;
+            margin-top: 16px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            background: #1E293B;
+            color: var(--text-main);
+            border: 1px solid var(--cyan);
+            padding: 10px 22px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--cyan);
+            color: #090D16;
+        }
+
+        .counter {
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge-code {
+            background: #0F172A;
+            color: #38BDF8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1 -->
+    <div class="slide-container active" id="slide-1">
+        <div style="text-align: center; margin: auto;">
+            <div class="header-tag">ENTERPRISE NETWORK OPERATIONS CENTER</div>
+            <h1 style="font-size: 46px; margin: 12px 0;">NetPulse SNMP</h1>
+            <h2 style="font-size: 18px; color: var(--text-main); max-width: 700px; margin: 0 auto 20px;">
+                Aplikasi Pemantauan Jaringan Real-Time Multi-Vendor Berbasis Android & Protokol SNMP
+            </h2>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 24px;">
+                <span class="header-tag" style="border-color: var(--cyan); color: var(--cyan);">MikroTik RouterOS</span>
+                <span class="header-tag" style="border-color: var(--emerald); color: var(--emerald);">Cisco Catalyst</span>
+                <span class="header-tag" style="border-color: var(--amber); color: var(--amber);">Ruijie Reyee</span>
+                <span class="header-tag" style="border-color: #A855F7; color: #A855F7;">OpenWrt Linux</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 13px;">
+                Universitas Nahdlatul Ulama Al Ghazali (UNUGHA) • Android Jetpack Compose M3
+            </p>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 1 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide-container" id="slide-2">
+        <div>
+            <div class="header-tag">BAGIAN 1: PENDAHULUAN</div>
+            <h1>Latar Belakang & Permasalahan</h1>
+            <h2>Mengapa Pemantauan Jaringan Mobile Ini Sangat Dibutuhkan di Kampus?</h2>
+        </div>
+        <div class="grid-2">
+            <div class="card amber">
+                <h3>Tantangan di Lapangan</h3>
+                <ul>
+                    <li><b>Ketergantungan PC/Laptop:</b> Admin NOC harus membuka WinBox atau Web GUI di meja kerja saat memeriksa jaringan.</li>
+                    <li><b>Penanganan Gangguan Lambat:</b> Saat internet gedung down, teknisi seringkali baru tahu setelah ada komplain.</li>
+                    <li><b>Heterogenitas Router:</b> Kampus memakai perangkat berbeda (MikroTik di gerbang, Cisco di server, Ruijie di lab).</li>
+                    <li><b>NMS Berat:</b> Software monitoring server (PRTG/Cacti/Zabbix) memerlukan dedicated server yang mahal.</li>
+                </ul>
+            </div>
+            <div class="card emerald">
+                <h3>Solusi NetPulse SNMP</h3>
+                <ul>
+                    <li><b>Monitoring Portabel:</b> Pemantauan instan cukup dari HP Android teknisi di saku baju.</li>
+                    <li><b>Tanpa Perantara:</b> HP berkomunikasi langsung via UDP Port 161 (SNMP) ke router.</li>
+                    <li><b>Telegram Early Warning:</b> Bot otomatis mengirim pesan ke grup Telegram saat CPU tinggi atau router mati.</li>
+                    <li><b>Universal Multi-Vendor:</b> Satu aplikasi untuk memantau MikroTik, Cisco, Ruijie, dan OpenWrt sekaligus.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 2 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide-container" id="slide-3">
+        <div>
+            <div class="header-tag">BAGIAN 2: CARA KERJA</div>
+            <h1>Arsitektur Sistem & Aliran Data</h1>
+            <h2>Bagaimana HP Android Membaca Telemetri Langsung dari Router?</h2>
+        </div>
+        <div class="grid-3">
+            <div class="card cyan">
+                <h3>1. Inisialisasi & Request</h3>
+                <ul>
+                    <li>Admin memasukkan IP Router (misal <span class="badge-code">192.168.88.1</span>) & Community String (<span class="badge-code">public</span>).</li>
+                    <li>Aplikasi membentuk paket <b>SNMP GetRequest</b> via protokol UDP Port 161.</li>
+                    <li>Pengiriman dilakukan setiap 3 detik secara asinkron (Coroutines).</li>
+                </ul>
+            </div>
+            <div class="card emerald">
+                <h3>2. Respons Router</h3>
+                <ul>
+                    <li>Router (MikroTik/Cisco) membalas dengan paket ASN.1 / BER Encoding.</li>
+                    <li>Engine membaca OID spesifik: beban CPU, centiseconds uptime, dan akumulasi oktet.</li>
+                    <li>Aplikasi menghitung selisih oktet per detik menjadi Kbps / Mbps riil.</li>
+                </ul>
+            </div>
+            <div class="card amber">
+                <h3>3. Rendering & Alert</h3>
+                <ul>
+                    <li>Visualisasi jarum <b>Gauge CPU</b> dan grafik kurva trafik di kanvas Jetpack Compose.</li>
+                    <li>Jika beban CPU > ambang batas (contoh 85%), bot Telegram langsung mengirim notifikasi darurat.</li>
+                    <li>Semua status tersimpan ke database lokal SQLite/Room di HP.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 3 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide-container" id="slide-4">
+        <div>
+            <div class="header-tag">BAGIAN 3: VALIDITAS DATA</div>
+            <h1>Pembuktian Validitas Data Riil MikroTik</h1>
+            <h2>Daftar OID Resmi MIB yang Diekstraksi dari RouterOS Kampus</h2>
+        </div>
+        <div class="grid-2">
+            <div class="card cyan">
+                <h3>Tabel OID Standar RouterOS</h3>
+                <ul>
+                    <li><b>CPU Load:</b> <span class="badge-code">1.3.6.1.4.1.14988.1.1.1.3.1.5.1</span> (mtxrHlProcessorUsage) & fallback <span class="badge-code">1.3.6.1.2.1.25.3.3.1.2.1</span>.</li>
+                    <li><b>Download Speed:</b> <span class="badge-code">1.3.6.1.2.1.31.1.1.1.6.1</span> (ifHCInOctets 64-bit High Capacity) untuk port Gigabit WAN.</li>
+                    <li><b>Upload Speed:</b> <span class="badge-code">1.3.6.1.2.1.31.1.1.1.10.1</span> (ifHCOutOctets 64-bit High Capacity).</li>
+                    <li><b>System Uptime:</b> <span class="badge-code">1.3.6.1.2.1.1.3.0</span> (sysUpTimeInstance) durasi aktif router.</li>
+                    <li><b>Active Clients:</b> <span class="badge-code">1.3.6.1.4.1.14988.1.1.1.2.1.1</span> tabel registrasi wireless / ARP.</li>
+                </ul>
+            </div>
+            <div class="card emerald">
+                <h3>Dua Mode Operasional</h3>
+                <ul>
+                    <li><b>Mode Riil (Simulasi = OFF):</b><br>
+                    Menghubungi IP fisik router kampus. Menghasilkan telemetri riil. Jika router mati, status seketika menjadi OFFLINE.</li>
+                    <li><b>Mode Simulasi (Simulasi = ON):</b><br>
+                    Sangat berguna untuk demonstrasi di kelas, sidang skripsi, atau saat laptop/HP tidak sedang terkoneksi ke Wi-Fi kampus.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 4 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="slide-container" id="slide-5">
+        <div>
+            <div class="header-tag">BAGIAN 4: FITUR UNGGULAN</div>
+            <h1>Modul & Fitur Utama Aplikasi</h1>
+            <h2>Enam Kemampuan Utama dalam Satu Konsol Monitoring Mobile</h2>
+        </div>
+        <div class="grid-3">
+            <div class="card cyan">
+                <h3>1. Portal Login NOC</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Otentikasi keamanan operator sebelum mengakses monitoring. Dilengkapi fitur 'Ingat Sesi' & ubah kata sandi.</p>
+                <span class="badge-code">Default: admin / admin123</span>
+            </div>
+            <div class="card emerald">
+                <h3>2. Dashboard Telemetri</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Jarum CPU analog, grafik kanvas real-time unduh/unggah, durasi uptime, dan counter klien aktif.</p>
+                <span class="badge-code">Polling Tiap 3 Detik</span>
+            </div>
+            <div class="card amber">
+                <h3>3. Interface Manager</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Inspeksi status antarmuka fisik (UP/DOWN), port SFP+, trunk port, MAC address, serta byte RX/TX.</p>
+                <span class="badge-code">Port Status & Speed</span>
+            </div>
+            <div class="card amber">
+                <h3>4. VLAN & DHCP Leases</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Daftar pemetaan subnet VLAN serta daftar klien yang mendapatkan alamat IP otomatis dari DHCP server.</p>
+                <span class="badge-code">Bound & Static IP</span>
+            </div>
+            <div class="card cyan">
+                <h3>5. Telegram Bot Alert</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Pengiriman pesan peringatan ke Telegram saat router down atau CPU panas dengan slider ambang batas.</p>
+                <span class="badge-code">Bot API Integration</span>
+            </div>
+            <div class="card emerald">
+                <h3>6. SNMP MIB Walker</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Fitur diagnostik untuk mengirim query OID kustom dan mengukur kecepatan latency response time (ms).</p>
+                <span class="badge-code">Raw OID Query</span>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 5 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 6 -->
+    <div class="slide-container" id="slide-6">
+        <div>
+            <div class="header-tag">BAGIAN 5: KEAMANAN</div>
+            <h1>Keamanan & Sistem Login Admin</h1>
+            <h2>Melindungi Akses Konsol Jaringan dari Pihak yang Tidak Berwenang</h2>
+        </div>
+        <div class="grid-2">
+            <div class="card cyan">
+                <h3>Proteksi di Aplikasi</h3>
+                <ul>
+                    <li><b>Gerbang Otentikasi:</b> Pengguna tidak dapat melihat dashboard telemetri tanpa login dengan kredensial yang valid.</li>
+                    <li><b>Visibilitas Sandi:</b> Ikon intip sandi untuk menghindari kesalahan pengetikan di lapangan.</li>
+                    <li><b>Penyimpanan Sesi Aman:</b> Menggunakan penyimpanan lokal terenkripsi Android SharedPreferences.</li>
+                    <li><b>Manajemen Sandi:</b> Kata sandi bawaan dapat diubah kapan saja di menu Pengaturan.</li>
+                </ul>
+            </div>
+            <div class="card emerald">
+                <h3>Praktik Keamanan SNMP Jaringan</h3>
+                <ul>
+                    <li><b>Kustom Community String:</b> Mendukung string unik selain <span class="badge-code">public</span> untuk privasi OID.</li>
+                    <li><b>Firewall Subnet Filtering:</b> Di MikroTik, akses SNMP dapat dibatasi hanya untuk subnet IP teknisi.</li>
+                    <li><b>Tanpa Bocoran Cloud:</b> Tidak ada data perangkat yang diunggah ke server pihak ketiga manapun.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 6 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 7 -->
+    <div class="slide-container" id="slide-7">
+        <div>
+            <div class="header-tag">BAGIAN 6: TEKNOLOGI</div>
+            <h1>Teknologi & Arsitektur Perangkat Lunak</h1>
+            <h2>Standar Pengembangan Modern Android Google (100% Kotlin)</h2>
+        </div>
+        <div class="grid-2">
+            <div class="card cyan">
+                <h3>Komponen Teknologi</h3>
+                <ul>
+                    <li><b>Bahasa:</b> Kotlin 100% (Modern, Type-Safe, Expressive).</li>
+                    <li><b>UI Toolkit:</b> Jetpack Compose & Material Design 3 (M3).</li>
+                    <li><b>Pola Desain:</b> MVVM (Model-View-ViewModel) + Repository Pattern.</li>
+                    <li><b>Asinkron:</b> Kotlin Coroutines & StateFlow.</li>
+                    <li><b>Penyimpanan:</b> Room SQLite Database (Lokal & Offline).</li>
+                    <li><b>Protokol:</b> Native UDP Datagram Socket & BER Decoder.</li>
+                </ul>
+            </div>
+            <div class="card emerald">
+                <h3>Desain Responsif (Adaptive Layout)</h3>
+                <ul>
+                    <li><b>Mode Smartphone (Galaxy A10):</b> Navigasi bawah (Bottom Navigation Bar) yang mudah dijangkau satu tangan.</li>
+                    <li><b>Mode Tablet (Galaxy Tab A7 Lite):</b> Panel navigasi samping (Navigation Rail) untuk produktivitas multi-panel.</li>
+                    <li><b>Ukuran APK:</b> Sangat ringkas (~15 MB) dan efisien dalam penggunaan baterai HP.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 7 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 8 -->
+    <div class="slide-container" id="slide-8">
+        <div>
+            <div class="header-tag">BAGIAN 7: ROADMAP</div>
+            <h1>Kesimpulan & Rencana Pengembangan</h1>
+            <h2>Manfaat Nyata yang Dihasilkan dan Rencana Pembaruan Mendatang</h2>
+        </div>
+        <div class="grid-2">
+            <div class="card emerald">
+                <h3>Manfaat Utama yang Dicapai</h3>
+                <ul>
+                    <li><b>Mobilitas Penuh:</b> Teknisi dapat mengecek status kesehatan router langsung dari lapangan.</li>
+                    <li><b>Tanggap Darurat Lebih Cepat:</b> Notifikasi Telegram mencegah downtime berkepanjangan di kampus.</li>
+                    <li><b>Multi-Vendor Universal:</b> Menghemat waktu tanpa perlu berganti-ganti aplikasi vendor.</li>
+                    <li><b>Bebas Biaya Server:</b> Berjalan mandiri tanpa perlu menyewa VPS.</li>
+                </ul>
+            </div>
+            <div class="card cyan">
+                <h3>Rencana Masa Depan (Roadmap)</h3>
+                <ul>
+                    <li><b>SNMP v3:</b> Menambahkan otentikasi SHA-256 dan enkripsi privasi AES-128.</li>
+                    <li><b>Auto Discovery:</b> Pemindaian IP otomatis untuk mendeteksi seluruh perangkat dalam satu subnet.</li>
+                    <li><b>Ekspor PDF:</b> Pembuatan laporan rekap gangguan dan performa bulanan otomatis.</li>
+                    <li><b>Home Screen Widget:</b> Ringkasan status router langsung di layar depan HP.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 8 / 9</span>
+        </div>
+    </div>
+
+    <!-- SLIDE 9 -->
+    <div class="slide-container" id="slide-9">
+        <div style="text-align: center; margin: auto;">
+            <div class="header-tag" style="border-color: var(--cyan); color: var(--cyan);">SESI AKHIR</div>
+            <h1 style="font-size: 42px; margin: 16px 0;">Terima Kasih</h1>
+            <h2 style="font-size: 20px; color: var(--text-main); margin-bottom: 20px;">
+                NetPulse SNMP — Solusi Monitoring Jaringan Modern di Genggaman Anda
+            </h2>
+            <div class="card cyan" style="display: inline-block; padding: 20px 40px; margin-bottom: 24px;">
+                <p style="font-size: 18px; font-weight: 700; color: var(--cyan);">Sesi Diskusi & Tanya Jawab (Q&A)</p>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">
+                    Kami siap menerima pertanyaan, masukan, dan saran dari para penguji.
+                </p>
+            </div>
+            <p style="color: var(--text-muted); font-size: 13px;">
+                Universitas Nahdlatul Ulama Al Ghazali (UNUGHA)
+            </p>
+        </div>
+        <div class="footer">
+            <span>NetPulse SNMP Presentation</span>
+            <span>Slide 9 / 9</span>
+        </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+        <button onclick="prevSlide()">◀ Sebelumnya</button>
+        <span class="counter" id="slide-indicator">Slide 1 dari 9</span>
+        <button onclick="nextSlide()">Berikutnya ▶</button>
+        <button onclick="window.print()" style="border-color: var(--emerald); color: var(--emerald);">🖨️ Cetak / Simpan PDF</button>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 9;
+
+        function showSlide(n) {
+            for (let i = 1; i <= totalSlides; i++) {
+                const s = document.getElementById('slide-' + i);
+                if (s) s.classList.remove('active');
+            }
+            const active = document.getElementById('slide-' + n);
+            if (active) active.classList.add('active');
+            document.getElementById('slide-indicator').innerText = `Slide ${n} dari ${totalSlides}`;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+    </script>
+</body>
+</html>

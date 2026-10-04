@@ -1,0 +1,6 @@
+{
+  "name": "NetPulse SNMP",
+  "description": "Sistem monitoring & kinerja jaringan internet multi-vendor (MikroTik, Cisco, Ruijie, OpenWrt) via SNMP dengan grafik real-time, pantauan CPU, traffic upload/download, client, uptime, VLAN, DHCP, interface statistik, dan alert otomatis Telegram.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
