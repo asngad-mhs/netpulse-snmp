@@ -27,9 +27,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SettingsInputAntenna
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
@@ -98,6 +100,10 @@ fun DeviceDetailScreen(
     val metrics = device?.let { metricsMap[it.id] } ?: emptyList()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val connectionTestState by viewModel.connectionTestState.collectAsStateWithLifecycle()
+
     val tabTitles = listOf("Ringkasan", "Interface (${ifaces.size})", "VLAN (${vlans.size})", "DHCP (${dhcpLeases.size})", "SNMP Diagnostic")
 
     if (device == null) {
@@ -150,8 +156,61 @@ fun DeviceDetailScreen(
                     )
                 }
 
-                OnlineStatusBadge(device.isOnline, device.isSimulated)
+                // Status Badge & Action Buttons
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    OnlineStatusBadge(device.isOnline, device.isSimulated)
+
+                    // Test Connect Button
+                    IconButton(
+                        onClick = { viewModel.testDeviceConnection(device) },
+                        modifier = Modifier.testTag("btn_detail_test_connect")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sensors,
+                            contentDescription = "Uji Koneksi",
+                            tint = CyanNeon,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Edit Device Button
+                    IconButton(
+                        onClick = { showEditDialog = true },
+                        modifier = Modifier.testTag("btn_detail_edit_device")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Perangkat",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Delete Device Button
+                    IconButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.testTag("btn_detail_delete_device")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Hapus Perangkat",
+                            tint = RoseError,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
+        }
+
+        // Live test connection result feedback banner
+        if (connectionTestState != null && connectionTestState?.deviceId == device.id) {
+            TestConnectionFeedbackBanner(
+                testResult = connectionTestState,
+                onDismiss = { viewModel.clearConnectionTestState() }
+            )
         }
 
         // Tab Row
@@ -188,6 +247,32 @@ fun DeviceDetailScreen(
                 4 -> SnmpDiagnosticTabContent(device, viewModel)
             }
         }
+    }
+
+    if (showEditDialog) {
+        DeviceFormDialog(
+            deviceToEdit = device,
+            onDismiss = { showEditDialog = false },
+            onSave = { updated ->
+                viewModel.saveDevice(updated)
+                showEditDialog = false
+            },
+            onTestConnection = { h, p, c, v, sim ->
+                viewModel.testArbitraryConnection(h, p, c, v, sim)
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        DeleteDeviceConfirmDialog(
+            device = device,
+            onDismiss = { showDeleteDialog = false },
+            onConfirm = {
+                viewModel.deleteDevice(device.id)
+                showDeleteDialog = false
+                onBack()
+            }
+        )
     }
 }
 

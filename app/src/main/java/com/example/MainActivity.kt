@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.screens.AddDeviceDialog
+import com.example.ui.screens.DeviceFormDialog
 import com.example.ui.screens.AlertsScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.DeviceDetailScreen
@@ -327,11 +327,15 @@ fun NetPulseApp(viewModel: NetworkViewModel) {
     }
 
     if (showAddDeviceModal) {
-        AddDeviceDialog(
+        DeviceFormDialog(
+            deviceToEdit = null,
             onDismiss = { showAddDeviceModal = false },
             onSave = { newDev ->
                 viewModel.saveDevice(newDev)
                 showAddDeviceModal = false
+            },
+            onTestConnection = { h, p, c, v, sim ->
+                viewModel.testArbitraryConnection(h, p, c, v, sim)
             }
         )
     }

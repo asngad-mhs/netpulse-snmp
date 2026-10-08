@@ -29,7 +29,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeviceHub
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.People
@@ -49,8 +51,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -88,6 +94,11 @@ fun DashboardScreen(
     val vendorFilter by viewModel.selectedVendorFilter.collectAsStateWithLifecycle()
     val metricsMap by viewModel.metricsHistory.collectAsStateWithLifecycle()
     val telegramConfig by viewModel.telegramConfig.collectAsStateWithLifecycle()
+    val connectionTestState by viewModel.connectionTestState.collectAsStateWithLifecycle()
+    val isTestingConnection by viewModel.isTestingConnection.collectAsStateWithLifecycle()
+
+    var deviceToEdit by remember { mutableStateOf<DeviceEntity?>(null) }
+    var deviceToDelete by remember { mutableStateOf<DeviceEntity?>(null) }
 
     val currentMetrics = activeDevice?.let { metricsMap[it.id] } ?: emptyList()
 
@@ -102,6 +113,15 @@ fun DashboardScreen(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (connectionTestState != null) {
+            item {
+                TestConnectionFeedbackBanner(
+                    testResult = connectionTestState,
+                    onDismiss = { viewModel.clearConnectionTestState() }
+                )
+            }
+        }
+
         item {
             Spacer(modifier = Modifier.height(4.dp))
             // Telemetry Header Summary Bar
@@ -247,7 +267,7 @@ fun DashboardScreen(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val vendors = listOf("ALL", "MIKROTIK", "CISCO", "RUIJIE", "OPENWRT")
+                    val vendors = listOf("ALL", "MIKROTIK", "CISCO", "RUIJIE", "OPENWRT", "LINKSYS")
                     items(vendors) { v ->
                         val isSelected = vendorFilter == v
                         FilterChip(
@@ -415,28 +435,42 @@ fun DashboardScreen(
                                 onClick = { onNavigateToDetail(dev.id) },
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f).testTag("btn_inspect_${dev.id}")
+                                modifier = Modifier.weight(1.1f).testTag("btn_inspect_${dev.id}")
                             ) {
                                 Icon(Icons.Default.DeviceHub, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Buka Telemetri", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Buka Telemetri", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = { viewModel.testDeviceConnection(dev) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CyanNeon.copy(alpha = 0.2f),
+                                    contentColor = CyanNeon
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f).testTag("btn_test_active_device")
+                            ) {
+                                Icon(Icons.Default.Sensors, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Uji Koneksi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
 
                             OutlinedButton(
-                                onClick = {
-                                    viewModel.sendManualAlert(
-                                        deviceId = dev.id,
-                                        title = "Uji Peringatan Manual",
-                                        message = "Pemeriksaan telemetri via Dashboard oleh operator NOC (CPU ${dev.cpuUsage}%, Traffic Down ${formatSpeed(dev.downloadSpeedKbps)}).",
-                                        severity = "INFO"
-                                    )
-                                },
+                                onClick = { deviceToEdit = dev },
                                 shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(0.9f).testTag("btn_quick_alert")
+                                modifier = Modifier.weight(0.8f).testTag("btn_edit_active_device")
                             ) {
-                                Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Kirim Alert", fontSize = 12.sp)
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text("Edit", fontSize = 11.sp)
+                            }
+
+                            IconButton(
+                                onClick = { deviceToDelete = dev },
+                                modifier = Modifier.testTag("btn_delete_active_device")
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = RoseError)
                             }
                         }
                     }
@@ -460,12 +494,12 @@ fun DashboardScreen(
                 Button(
                     onClick = onNavigateToAddDevice,
                     shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.testTag("btn_add_device_header")
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tambah", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Tambah Perangkat", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -487,90 +521,130 @@ fun DashboardScreen(
                     .clickable { viewModel.selectDevice(dev.id) }
                     .testTag("device_card_${dev.id}")
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp, start = 14.dp, end = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Vendor avatar icon
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(MaterialTheme.colorScheme.surface, CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                Icons.Default.Router,
-                                contentDescription = dev.vendor,
-                                tint = when (dev.vendor.uppercase()) {
-                                    "MIKROTIK" -> CyanNeon
-                                    "CISCO" -> MaterialTheme.colorScheme.primary
-                                    "RUIJIE" -> Color(0xFFEA580C)
-                                    "OPENWRT" -> EmeraldGreen
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                },
-                                modifier = Modifier.size(24.dp)
-                            )
+                            // Vendor avatar icon
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(MaterialTheme.colorScheme.surface, CircleShape)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Router,
+                                    contentDescription = dev.vendor,
+                                    tint = when (dev.vendor.uppercase()) {
+                                        "MIKROTIK" -> CyanNeon
+                                        "CISCO" -> MaterialTheme.colorScheme.primary
+                                        "RUIJIE" -> Color(0xFFEA580C)
+                                        "OPENWRT" -> EmeraldGreen
+                                        "LINKSYS" -> Color(0xFF0284C7)
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = dev.name,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Text(
+                                    text = "${dev.vendor} • ${dev.host}:${dev.port}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "CPU: ${dev.cpuUsage}%",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (dev.cpuUsage > 80) RoseError else MaterialTheme.colorScheme.primary,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Text(
+                                        text = "↓ ${formatSpeed(dev.downloadSpeedKbps)}",
+                                        fontSize = 11.sp,
+                                        color = CyanNeon,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Text(
+                                        text = "↑ ${formatSpeed(dev.uploadSpeedKbps)}",
+                                        fontSize = 11.sp,
+                                        color = EmeraldGreen,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
                         }
 
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = dev.name,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                        Column(horizontalAlignment = Alignment.End) {
+                            OnlineStatusBadge(dev.isOnline, dev.isSimulated)
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "${dev.vendor} • ${dev.host}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontFamily = FontFamily.Monospace
+                                text = "${dev.clientCount} klien",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "CPU: ${dev.cpuUsage}%",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (dev.cpuUsage > 80) RoseError else MaterialTheme.colorScheme.primary,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                                Text(
-                                    text = "↓ ${formatSpeed(dev.downloadSpeedKbps)}",
-                                    fontSize = 11.sp,
-                                    color = CyanNeon,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                                Text(
-                                    text = "↑ ${formatSpeed(dev.uploadSpeedKbps)}",
-                                    fontSize = 11.sp,
-                                    color = EmeraldGreen,
-                                    fontFamily = FontFamily.Monospace
-                                )
-                            }
                         }
                     }
 
-                    Column(horizontalAlignment = Alignment.End) {
-                        OnlineStatusBadge(dev.isOnline, dev.isSimulated)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "${dev.clientCount} klien",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    // Card Action Footer (Uji Koneksi, Edit, Hapus)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Test Connect Button
+                        TextButton(
+                            onClick = { viewModel.testDeviceConnection(dev) },
+                            modifier = Modifier.testTag("btn_quick_test_${dev.id}")
+                        ) {
+                            Icon(Icons.Default.Sensors, contentDescription = "Uji", tint = CyanNeon, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Uji Koneksi", fontSize = 11.sp, color = CyanNeon, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Edit Button
+                        TextButton(
+                            onClick = { deviceToEdit = dev },
+                            modifier = Modifier.testTag("btn_quick_edit_${dev.id}")
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+
+                        // Delete Button
+                        IconButton(
+                            onClick = { deviceToDelete = dev },
+                            modifier = Modifier.size(32.dp).testTag("btn_quick_delete_${dev.id}")
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = RoseError, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
@@ -579,5 +653,32 @@ fun DashboardScreen(
         item {
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Modal Edit Device Dialog
+    if (deviceToEdit != null) {
+        DeviceFormDialog(
+            deviceToEdit = deviceToEdit,
+            onDismiss = { deviceToEdit = null },
+            onSave = { updated ->
+                viewModel.saveDevice(updated)
+                deviceToEdit = null
+            },
+            onTestConnection = { h, p, c, v, sim ->
+                viewModel.testArbitraryConnection(h, p, c, v, sim)
+            }
+        )
+    }
+
+    // Modal Delete Device Confirmation Dialog
+    if (deviceToDelete != null) {
+        DeleteDeviceConfirmDialog(
+            device = deviceToDelete!!,
+            onDismiss = { deviceToDelete = null },
+            onConfirm = {
+                viewModel.deleteDevice(deviceToDelete!!.id)
+                deviceToDelete = null
+            }
+        )
     }
 }

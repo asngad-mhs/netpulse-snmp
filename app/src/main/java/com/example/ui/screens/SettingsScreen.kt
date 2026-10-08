@@ -26,11 +26,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -69,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.DeviceEntity
+import com.example.ui.components.OnlineStatusBadge
 import com.example.ui.components.VendorBadge
 import com.example.ui.theme.CyanNeon
 import com.example.ui.theme.EmeraldGreen
@@ -86,6 +89,9 @@ fun SettingsScreen(
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var deviceToEdit by remember { mutableStateOf<DeviceEntity?>(null) }
+    var deviceToDelete by remember { mutableStateOf<DeviceEntity?>(null) }
+    val connectionTestState by viewModel.connectionTestState.collectAsStateWithLifecycle()
     var showChangePassDialog by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 
@@ -332,36 +338,65 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(dev.name, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            VendorBadge(dev.vendor)
+                Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(dev.name, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                VendorBadge(dev.vendor)
+                            }
+                            Text(
+                                text = "${dev.host}:${dev.port} • Community: ${dev.community}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Text(
+                                text = if (dev.isSimulated) "Mode: Simulasi Cerdas (Emulator)" else "Mode: Real Hardware SNMP UDP 161",
+                                fontSize = 11.sp,
+                                color = if (dev.isSimulated) EmeraldGreen else CyanNeon
+                            )
                         }
-                        Text(
-                            text = "${dev.host}:${dev.port} • Community: ${dev.community}",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = FontFamily.Monospace
-                        )
-                        Text(
-                            text = if (dev.isSimulated) "Mode: Simulasi Cerdas (Emulator)" else "Mode: Real Hardware SNMP",
-                            fontSize = 11.sp,
-                            color = if (dev.isSimulated) EmeraldGreen else CyanNeon
-                        )
+
+                        OnlineStatusBadge(dev.isOnline, dev.isSimulated)
                     }
 
-                    IconButton(
-                        onClick = { viewModel.deleteDevice(dev.id) },
-                        modifier = Modifier.testTag("btn_delete_device_${dev.id}")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Action buttons row: Uji Koneksi, Edit, Hapus
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = RoseError)
+                        TextButton(
+                            onClick = { viewModel.testDeviceConnection(dev) },
+                            modifier = Modifier.testTag("btn_settings_test_${dev.id}")
+                        ) {
+                            Icon(Icons.Default.Sensors, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Uji Koneksi", fontSize = 11.sp, color = CyanNeon, fontWeight = FontWeight.Bold)
+                        }
+
+                        TextButton(
+                            onClick = { deviceToEdit = dev },
+                            modifier = Modifier.testTag("btn_settings_edit_${dev.id}")
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+
+                        IconButton(
+                            onClick = { deviceToDelete = dev },
+                            modifier = Modifier.testTag("btn_settings_delete_${dev.id}")
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = RoseError, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }
@@ -381,7 +416,7 @@ fun SettingsScreen(
                         Text("KOMPATIBILITAS MULTI-DEVICE", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     Text(
-                        text = "• Responsif untuk HP layar ringkas (Samsung Galaxy A10) & Tablet layar besar (Samsung Galaxy Tab A7 Lite / Foldable).\n• Didukung engine SNMP ASN.1 BER UDP independen (v1/v2c).\n• Vendor didukung penuh: MikroTik RouterOS, Cisco IOS/Catalyst, Ruijie Reyee RGOS, OpenWrt Net-SNMP.",
+                        text = "• Responsif untuk HP layar ringkas (Samsung Galaxy A10) & Tablet layar besar (Samsung Galaxy Tab A7 Lite / Foldable).\n• Didukung engine SNMP ASN.1 BER UDP independen (v1/v2c).\n• Vendor didukung penuh: MikroTik RouterOS, Cisco IOS/Catalyst, Ruijie Reyee RGOS, OpenWrt Net-SNMP, Linksys EA/WRT Series, dan Generic SNMP.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -395,11 +430,40 @@ fun SettingsScreen(
     }
 
     if (showAddDialog) {
-        AddDeviceDialog(
+        DeviceFormDialog(
+            deviceToEdit = null,
             onDismiss = { showAddDialog = false },
             onSave = { newDev ->
                 viewModel.saveDevice(newDev)
                 showAddDialog = false
+            },
+            onTestConnection = { h, p, c, v, sim ->
+                viewModel.testArbitraryConnection(h, p, c, v, sim)
+            }
+        )
+    }
+
+    if (deviceToEdit != null) {
+        DeviceFormDialog(
+            deviceToEdit = deviceToEdit,
+            onDismiss = { deviceToEdit = null },
+            onSave = { updated ->
+                viewModel.saveDevice(updated)
+                deviceToEdit = null
+            },
+            onTestConnection = { h, p, c, v, sim ->
+                viewModel.testArbitraryConnection(h, p, c, v, sim)
+            }
+        )
+    }
+
+    if (deviceToDelete != null) {
+        DeleteDeviceConfirmDialog(
+            device = deviceToDelete!!,
+            onDismiss = { deviceToDelete = null },
+            onConfirm = {
+                viewModel.deleteDevice(deviceToDelete!!.id)
+                deviceToDelete = null
             }
         )
     }
@@ -438,164 +502,17 @@ private fun ThemeOptionRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddDeviceDialog(
     onDismiss: () -> Unit,
     onSave: (DeviceEntity) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var vendor by remember { mutableStateOf("MikroTik") }
-    var host by remember { mutableStateOf("192.168.88.1") }
-    var port by remember { mutableStateOf("161") }
-    var community by remember { mutableStateOf("public") }
-    var snmpVersion by remember { mutableIntStateOf(1) } // v2c
-    var isSimulated by remember { mutableStateOf(true) }
-
-    val vendors = listOf("MikroTik", "Cisco", "Ruijie", "OpenWrt", "Generic")
-    var expandedVendor by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text("Tambah Perangkat Jaringan", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nama Perangkat") },
-                    placeholder = { Text("contoh: Core Router Gedung B") },
-                    modifier = Modifier.fillMaxWidth().testTag("input_device_name"),
-                    singleLine = true
-                )
-
-                // Vendor selector dropdown
-                ExposedDropdownMenuBox(
-                    expanded = expandedVendor,
-                    onExpandedChange = { expandedVendor = it },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = vendor,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Vendor Hardware") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedVendor) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedVendor,
-                        onDismissRequest = { expandedVendor = false }
-                    ) {
-                        vendors.forEach { v ->
-                            DropdownMenuItem(
-                                text = { Text(v) },
-                                onClick = {
-                                    vendor = v
-                                    expandedVendor = false
-                                    // Set default IP presets based on vendor
-                                    when (v) {
-                                        "MikroTik" -> {
-                                            if (host == "192.168.1.1" || host.isBlank()) host = "192.168.88.1"
-                                            if (name.isBlank()) name = "MikroTik RouterOS"
-                                        }
-                                        "Cisco" -> {
-                                            if (name.isBlank()) name = "Cisco Catalyst Switch"
-                                            community = "cisco_public"
-                                        }
-                                        "Ruijie" -> {
-                                            if (name.isBlank()) name = "Ruijie Reyee Switch/AP"
-                                            community = "ruijie_snmp"
-                                        }
-                                        "OpenWrt" -> {
-                                            if (name.isBlank()) name = "OpenWrt Gateway"
-                                            host = "192.168.1.1"
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = host,
-                        onValueChange = { host = it },
-                        label = { Text("IP Host") },
-                        modifier = Modifier.weight(1.5f).testTag("input_device_host"),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = port,
-                        onValueChange = { port = it },
-                        label = { Text("Port") },
-                        modifier = Modifier.weight(0.9f).testTag("input_device_port"),
-                        singleLine = true
-                    )
-                }
-
-                OutlinedTextField(
-                    value = community,
-                    onValueChange = { community = it },
-                    label = { Text("Community String") },
-                    modifier = Modifier.fillMaxWidth().testTag("input_device_community"),
-                    singleLine = true
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("Mode Simulasi:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("Cocok untuk uji emulator / offline", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = isSimulated,
-                        onCheckedChange = { isSimulated = it },
-                        modifier = Modifier.testTag("switch_device_simulated")
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isNotBlank() && host.isNotBlank()) {
-                        val p = port.toIntOrNull() ?: 161
-                        onSave(
-                            DeviceEntity(
-                                name = name.trim(),
-                                vendor = vendor,
-                                host = host.trim(),
-                                port = p,
-                                community = community.trim().ifBlank { "public" },
-                                snmpVersion = snmpVersion,
-                                isSimulated = isSimulated,
-                                isOnline = true,
-                                isEnabled = true
-                            )
-                        )
-                    }
-                },
-                enabled = name.isNotBlank() && host.isNotBlank(),
-                modifier = Modifier.testTag("btn_confirm_add_device")
-            ) {
-                Text("Simpan Perangkat")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal")
-            }
+    DeviceFormDialog(
+        deviceToEdit = null,
+        onDismiss = onDismiss,
+        onSave = onSave,
+        onTestConnection = { _, _, _, _, _ ->
+            com.example.snmp.SnmpClient.SnmpResult(true, 12L)
         }
     )
 }

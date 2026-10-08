@@ -71,6 +71,88 @@ class NetworkRepository(
 
     suspend fun deleteDevice(deviceId: Int) {
         deviceDao.deleteDeviceById(deviceId)
+        // Clean up auxiliary cached data
+        val curIf = _deviceInterfaces.value.toMutableMap()
+        curIf.remove(deviceId)
+        _deviceInterfaces.value = curIf
+
+        val curVlan = _deviceVlans.value.toMutableMap()
+        curVlan.remove(deviceId)
+        _deviceVlans.value = curVlan
+
+        val curDhcp = _deviceDhcpLeases.value.toMutableMap()
+        curDhcp.remove(deviceId)
+        _deviceDhcpLeases.value = curDhcp
+
+        val curMetrics = _deviceMetricsHistory.value.toMutableMap()
+        curMetrics.remove(deviceId)
+        _deviceMetricsHistory.value = curMetrics
+    }
+
+    /**
+     * Test connectivity to a network host via UDP SNMP (Port 161) or verified simulation
+     */
+    suspend fun testDeviceConnectivity(
+        host: String,
+        port: Int = 161,
+        community: String = "public",
+        version: Int = 1,
+        isSimulated: Boolean = false
+    ): SnmpClient.SnmpResult {
+        return if (isSimulated) {
+            delay(280L)
+            SnmpClient.SnmpResult(
+                success = true,
+                latencyMs = (9L..24L).random(),
+                varBinds = listOf(
+                    com.example.snmp.Asn1Ber.VarBind(
+                        oid = ".1.3.6.1.2.1.1.1.0",
+                        value = com.example.snmp.Asn1Ber.BerValue(
+                            tag = com.example.snmp.Asn1Ber.TAG_OCTET_STRING,
+                            rawValue = byteArrayOf(),
+                            stringValue = "Simulated SNMP Device ($host)"
+                        )
+                    )
+                ),
+                errorMessage = null
+            )
+        } else {
+            snmpClient.snmpGet(
+                host = host,
+                port = port,
+                community = community,
+                version = version,
+                oids = listOf(
+                    ".1.3.6.1.2.1.1.1.0", // sysDescr
+                    ".1.3.6.1.2.1.1.3.0", // sysUpTime
+                    ".1.3.6.1.2.1.1.5.0"  // sysName
+                )
+            )
+        }
+    }
+
+    /**
+     * Ping and refresh online status for a saved device
+     */
+    suspend fun testAndPingDevice(deviceId: Int): SnmpClient.SnmpResult {
+        val dev = deviceDao.getDeviceById(deviceId) ?: return SnmpClient.SnmpResult(
+            success = false,
+            latencyMs = 0L,
+            errorMessage = "Perangkat ID $deviceId tidak ditemukan di database"
+        )
+        val result = testDeviceConnectivity(
+            host = dev.host,
+            port = dev.port,
+            community = dev.community,
+            version = dev.snmpVersion,
+            isSimulated = dev.isSimulated
+        )
+        val updated = dev.copy(
+            isOnline = result.success,
+            lastUpdated = System.currentTimeMillis()
+        )
+        deviceDao.updateDevice(updated)
+        return result
     }
 
     suspend fun saveTelegramConfig(config: TelegramConfigEntity) {
@@ -420,6 +502,15 @@ class NetworkRepository(
                 NetworkInterfaceInfo("GigabitEthernet0/2 (PoE AP-02)", "Ethernet", "UP", "14:14:4B:32:00:02", 1000, 1500, 545920384L, 184820129L, currentDown * 0.4, currentUp * 0.2, 0, 0, 50),
                 NetworkInterfaceInfo("GigabitEthernet0/3 (CCTV-NVR)", "Ethernet", "UP", "14:14:4B:32:00:03", 1000, 1500, 245920384L, 854820129L, currentDown * 0.05, currentUp * 0.4, 0, 0, 40),
                 NetworkInterfaceInfo("SFP+ 0/25 (Fiber-Optic)", "SFP+", "UP", "14:14:4B:32:00:19", 10000, 1500, 2845920384L, 1254820129L, currentDown, currentUp, 0, 0)
+            )
+            "LINKSYS" -> listOf(
+                NetworkInterfaceInfo("vlan1 (Internet WAN)", "VLAN", "UP", "C0:56:27:89:AB:01", 1000, 1500, 1945920384L, 854820129L, currentDown, currentUp, 0, 0, 1),
+                NetworkInterfaceInfo("eth0 (LAN 1 - PC)", "Ethernet", "UP", "C0:56:27:89:AB:02", 1000, 1500, 545920384L, 254820129L, currentDown * 0.4, currentUp * 0.3, 0, 0),
+                NetworkInterfaceInfo("eth1 (LAN 2 - TV)", "Ethernet", "UP", "C0:56:27:89:AB:03", 1000, 1500, 345920384L, 154820129L, currentDown * 0.25, currentUp * 0.1, 0, 0),
+                NetworkInterfaceInfo("eth2 (LAN 3)", "Ethernet", "DOWN", "C0:56:27:89:AB:04", 1000, 1500, 0L, 0L, 0.0, 0.0, 0, 0),
+                NetworkInterfaceInfo("eth3 (LAN 4)", "Ethernet", "DOWN", "C0:56:27:89:AB:05", 1000, 1500, 0L, 0L, 0.0, 0.0, 0, 0),
+                NetworkInterfaceInfo("wl0 (Wi-Fi 2.4GHz)", "Wireless", "UP", "C0:56:27:89:AB:10", 300, 1500, 245920384L, 94820129L, currentDown * 0.15, currentUp * 0.1, 0, 0),
+                NetworkInterfaceInfo("wl1 (Wi-Fi 5GHz)", "Wireless", "UP", "C0:56:27:89:AB:11", 1300, 1500, 845920384L, 344820129L, currentDown * 0.5, currentUp * 0.35, 0, 0)
             )
             else -> listOf(
                 NetworkInterfaceInfo("eth0 (WAN)", "Ethernet", "UP", "52:54:00:12:34:56", 1000, 1500, 1145920384L, 454820129L, currentDown, currentUp, 0, 0),

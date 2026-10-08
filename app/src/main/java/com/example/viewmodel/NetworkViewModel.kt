@@ -142,16 +142,70 @@ class NetworkViewModel(application: Application) : AndroidViewModel(application)
         _selectedDeviceId.value = id
     }
 
+    data class ConnectionTestResult(
+        val deviceId: Int?,
+        val host: String,
+        val port: Int,
+        val success: Boolean,
+        val latencyMs: Long,
+        val message: String,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+
+    private val _connectionTestState = MutableStateFlow<ConnectionTestResult?>(null)
+    val connectionTestState = _connectionTestState.asStateFlow()
+
+    private val _isTestingConnection = MutableStateFlow(false)
+    val isTestingConnection = _isTestingConnection.asStateFlow()
+
+    fun testDeviceConnection(device: DeviceEntity, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            _isTestingConnection.value = true
+            val res = repository.testAndPingDevice(device.id)
+            val msg = if (res.success) {
+                "✅ Terhubung! Latensi: ${res.latencyMs} ms (${device.vendor} @ ${device.host}:${device.port})"
+            } else {
+                "❌ Gagal Terhubung: ${res.errorMessage ?: "SNMP Timeout / Host Unreachable"}"
+            }
+            _connectionTestState.value = ConnectionTestResult(
+                deviceId = device.id,
+                host = device.host,
+                port = device.port,
+                success = res.success,
+                latencyMs = res.latencyMs,
+                message = msg
+            )
+            _isTestingConnection.value = false
+            onComplete?.invoke(res.success, msg)
+        }
+    }
+
+    suspend fun testArbitraryConnection(
+        host: String,
+        port: Int,
+        community: String,
+        version: Int,
+        isSimulated: Boolean
+    ): SnmpClient.SnmpResult {
+        return repository.testDeviceConnectivity(host, port, community, version, isSimulated)
+    }
+
+    fun clearConnectionTestState() {
+        _connectionTestState.value = null
+    }
+
     fun setThemeMode(mode: String) {
         _themeMode.value = mode
     }
 
     fun saveDevice(device: DeviceEntity) {
         viewModelScope.launch {
-            repository.saveDevice(device)
-            if (_selectedDeviceId.value == null) {
-                _selectedDeviceId.value = device.id
+            val savedId = repository.saveDevice(device)
+            if (_selectedDeviceId.value == null || device.id == 0) {
+                _selectedDeviceId.value = if (device.id != 0) device.id else savedId.toInt()
             }
+            // Trigger an immediate ping check to establish initial status
+            repository.testAndPingDevice(if (device.id != 0) device.id else savedId.toInt())
         }
     }
 

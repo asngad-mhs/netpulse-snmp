@@ -42,6 +42,8 @@ import com.example.ui.theme.CyanNeon
 import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.RoseError
 import com.example.ui.theme.VendorCisco
+import com.example.ui.theme.VendorGeneric
+import com.example.ui.theme.VendorLinksys
 import com.example.ui.theme.VendorMikrotik
 import com.example.ui.theme.VendorOpenWrt
 import com.example.ui.theme.VendorRuijie
@@ -80,6 +82,8 @@ fun VendorBadge(vendor: String, modifier: Modifier = Modifier) {
         "CISCO" -> Triple(VendorCisco.copy(alpha = 0.2f), VendorCisco, "CISCO")
         "RUIJIE" -> Triple(VendorRuijie.copy(alpha = 0.2f), VendorRuijie, "RUIJIE")
         "OPENWRT" -> Triple(VendorOpenWrt.copy(alpha = 0.2f), VendorOpenWrt, "OPENWRT")
+        "LINKSYS" -> Triple(VendorLinksys.copy(alpha = 0.2f), VendorLinksys, "LINKSYS")
+        "GENERIC" -> Triple(VendorGeneric.copy(alpha = 0.2f), VendorGeneric, "GENERIC")
         else -> Triple(Color.Gray.copy(alpha = 0.2f), Color.LightGray, vendor.uppercase())
     }
 

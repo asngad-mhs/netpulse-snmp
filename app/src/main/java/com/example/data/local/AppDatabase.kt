@@ -142,6 +142,27 @@ abstract class AppDatabase : RoomDatabase() {
                         uptimeSeconds = 2592000L, // 30 days
                         sysDescr = "Linux OpenWrt 5.15.150 #0 SMP x86_64 GNU/Linux Net-SNMP 5.9.1",
                         sysLocation = "Lab Jaringan & Komputer Kampus"
+                    ),
+                    DeviceEntity(
+                        id = 5,
+                        name = "Linksys WRT3200ACM Smart Wi-Fi",
+                        vendor = "Linksys",
+                        host = "192.168.1.1",
+                        port = 161,
+                        community = "public",
+                        snmpVersion = 1,
+                        pollingIntervalSeconds = 3,
+                        isEnabled = true,
+                        isOnline = true,
+                        isSimulated = true,
+                        cpuUsage = 21,
+                        memoryUsage = 36,
+                        uploadSpeedKbps = 1640.0,
+                        downloadSpeedKbps = 11200.0,
+                        clientCount = 34,
+                        uptimeSeconds = 432000L, // 5 days
+                        sysDescr = "Linksys WRT3200ACM Dual-Band Wi-Fi Router Firmware 1.0.8",
+                        sysLocation = "Ruang Laboratorium Jaringan Multimedia"
                     )
                 )
 

@@ -5,6 +5,7 @@ enum class NetworkVendor(val displayName: String, val defaultPort: Int, val desc
     CISCO("Cisco", 161, "Cisco IOS / IOS-XE / Catalyst / ISR"),
     RUIJIE("Ruijie", 161, "Ruijie Networks RGOS / Reyee Series"),
     OPENWRT("OpenWrt", 161, "OpenWrt Linux / Net-SNMP Embedded"),
+    LINKSYS("Linksys", 161, "Linksys Smart Wi-Fi / EA / WRT Series"),
     GENERIC("Generic SNMP", 161, "Standard MIB-II RFC 1213 Device")
 }
 
@@ -52,6 +53,14 @@ object VendorOidRegistry {
         vlanTableOid = ".1.3.6.1.2.1.17.7.1.4.3.1.1"
     )
 
+    val LINKSYS_SPEC = VendorOidSpec(
+        vendor = NetworkVendor.LINKSYS,
+        cpuLoadOid = ".1.3.6.1.2.1.25.3.3.1.2.1", // hrProcessorLoad
+        memoryUsageOid = ".1.3.6.1.2.1.25.2.3.1.6.1", // hrStorageUsed
+        clientCountOid = ".1.3.6.1.2.1.4.22.1.2", // ARP table client count
+        vlanTableOid = ".1.3.6.1.2.1.17.7.1.4.3.1.1" // dot1qVlanStaticName
+    )
+
     val GENERIC_SPEC = VendorOidSpec(
         vendor = NetworkVendor.GENERIC,
         cpuLoadOid = ".1.3.6.1.2.1.25.3.3.1.2.1",
@@ -66,6 +75,7 @@ object VendorOidRegistry {
             NetworkVendor.CISCO -> CISCO_SPEC
             NetworkVendor.RUIJIE -> RUIJIE_SPEC
             NetworkVendor.OPENWRT -> OPENWRT_SPEC
+            NetworkVendor.LINKSYS -> LINKSYS_SPEC
             NetworkVendor.GENERIC -> GENERIC_SPEC
         }
     }

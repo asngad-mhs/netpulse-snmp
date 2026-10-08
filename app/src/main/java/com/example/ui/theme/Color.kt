@@ -22,6 +22,8 @@ val VendorMikrotik = Color(0xFF2563EB) // Blue
 val VendorCisco = Color(0xFF0084FF)    // Cisco Cyan/Blue
 val VendorRuijie = Color(0xFFEA580C)   // Ruijie Orange
 val VendorOpenWrt = Color(0xFF16A34A)  // OpenWrt Green
+val VendorLinksys = Color(0xFF0284C7)  // Linksys Sky Blue
+val VendorGeneric = Color(0xFF8B5CF6)  // Generic Purple
 
 // Light theme palette
 val LightBackground = Color(0xFFF8FAFC)
